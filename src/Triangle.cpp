@@ -1,4 +1,5 @@
 #include <utility>
+#include <cmath>
 
 #include "Triangle.h"
 Triangle::Triangle(Matrix3d &vertices, Matrix3d &normals, Vector2d vt1, Vector2d vt2, Vector2d vt3)
@@ -32,7 +33,7 @@ auto Triangle::intersect(const Ray &ray, double t_min, double &t_max, Vector3d &
     Vector3d rayDirection = ray.wo;
     Vector3d h = rayDirection.cross(edge2);
     double a = edge1.dot(h);
-    if (a > 1e-12 && a < 1e-12) {
+    if (fabs(a) < 1e-12) {
         return false;
     }
     double f = 1.0 / a;
@@ -79,6 +80,5 @@ auto Triangle::fr(const Vector3d &x) const -> rgb {
 
     return rgb(1,0,0);
 }
-
 
 

@@ -2,7 +2,6 @@
 #include <AreaLight.h>
 #include "lambertian_reflection.h"
 
-auto clamp = [](double s){return s < 1.0/2.0 ? 0.0 : s;};
 const double PI  = 3.141592653589793238463;
 
 auto Lo(const Ray &ray, unsigned depth, bool not_double_path) -> rgb {
@@ -27,19 +26,24 @@ auto Lo(const Ray &ray, unsigned depth, bool not_double_path) -> rgb {
         double nu = (!inside) ? ior : 1 / ior; // are we inside or outside the surface?
         double R0 = pow((nu-1)/(nu+1), 2);
         double R = R0 + (1-R0)*pow(1-(-raydir.dot(n)), 5);
-        // Alpha
-        const double f  = clamp(1.5*(tanh(1 - (depth/15.0))));
-//        const double ad = f*(fr.r+fr.g+fr.b)/3;
-//        const double as = R*f*(fs.r+fs.g+fs.b)/3;
-//        const double at = (1-R)*f*(ft.r+ft.g+ft.b)/3;
-        const double ad = 1.0, as= 1.0, at = 1.0;
+        // Compute Russian roulette probabilities for diffuse, specular, and transmission components:
+        const unsigned MAX_DEPTH = 5;
+        double ad = (fr.r + fr.g + fr.b) / 3.0;
+        double as = R * (fs.r + fs.g + fs.b) / 3.0;
+        double at = (1 - R) * (ft.r + ft.g + ft.b) / 3.0;
+        double totalP = ad + as + at;
+        if (totalP > 1.0) {
+            ad /= totalP;
+            as /= totalP;
+            at /= totalP;
+        }
+        if (depth >= MAX_DEPTH) {
+            ad = as = at = 0.0;
+        }
         rgb direct = rgb(0,0,0);
-//        for (shared_ptr<Light> &light : lights) {
-//            direct += light->Li(x, n);
-//        }
+        // Direct lighting is disabled; using path tracing for all lighting.
         Li += direct;
         rgb indirect = rgb(0,0,0);
-        bool dp = direct.r > 0 || direct.g > 0 || direct.b > 0;
         Vector3d wi, r;
         // Russian Roulette
         if (sampler->random() < ad) {

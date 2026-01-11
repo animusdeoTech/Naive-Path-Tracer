@@ -38,11 +38,11 @@ if(HW2LIB_DIR)
 endif()
 
 add_executable(${PROJECT_NAME} ${SRCFILES} ${LIBIGL_EXTRA_SOURCES})
-target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${ROOT}/eigen/)
+target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${ROOT}/Eigen/)
 
 if(HW2LIB_DIR)
 else()
     add_library(hw2 ${HW2FILES})
-    target_include_directories(hw2 SYSTEM PUBLIC ${ROOT}/eigen)
+     target_include_directories(hw2 SYSTEM PUBLIC ${ROOT}/Eigen)
 endif()
 target_link_libraries(${PROJECT_NAME} hw2)

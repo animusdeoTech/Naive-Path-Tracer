@@ -6,13 +6,13 @@ Sphere::Sphere(double radius, Vector3d center) : radius(radius), c(move(center))
 
 
 Vector3d Sphere::v_min() const {
-    Vector3d v = this->c.normalized()*radius;
-    return this->c - v;
+    Vector3d offset(radius, radius, radius);
+    return c - offset;
 }
 
 Vector3d Sphere::v_max() const {
-    Vector3d v = this->c.normalized()*radius;
-    return this->c + v;
+    Vector3d offset(radius, radius, radius);
+    return c + offset;
 }
 
 Vector3d Sphere::center() const {
@@ -37,5 +37,4 @@ auto Sphere::intersect(const Ray &ray, double t_min, double &t_max, Vector3d &n,
     fr = material->kd;
     return true;
 }
-
 

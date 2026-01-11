@@ -12,7 +12,7 @@ auto AABB::v_max() const -> Vector3d {
 }
 
 auto AABB::center() const -> Vector3d {
-    return (vmax - vmin) / 2;
+    return (vmin + vmax) / 2;
 }
 
 auto AABB::intersect(const Ray &ray, double t_min, double &t_max, Vector3d &n, rgb &fr) const -> bool {
