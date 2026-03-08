@@ -1,26 +1,73 @@
-# Path Tracer
+# Naive Path Tracer
 
-A CPU-based, naive implementation of the classical path tracer in C++. This algorithm generates rendered images by calculating a solution to the rendering equation using Monte Carlo integration methods.
-The renderer is capable of simulating specular reflection, refraction/transparency and uses BVH as an acceleration data structure. A report in Dutch is included.
+A CPU path tracer in C++ with BVH acceleration, Monte Carlo sampling, specular reflection, and refraction.
 
+---
 
-Here are some interesting & relevant wikipedia pages:
-https://en.wikipedia.org/wiki/Path_tracing
-https://en.wikipedia.org/wiki/Monte_Carlo_integration
-https://en.wikipedia.org/wiki/Rendering_equation
-https://en.wikipedia.org/wiki/Bidirectional_reflectance_distribution_function
-
-
---- Images ---
-
+## Sample Images
 
 ![Refractive teapot with caustics](sample_images/teapot_1440p.png)
+*Refractive glass teapot with caustics — 1440p*
 
+![Specular dragon](sample_images/Dragon_32ssp_reflectance.png)
+*Specular dragon — 32 samples per pixel*
 
-![Specular reflection](sample_images/Dragon_32ssp_reflectance.png)
+![Shiny dragon](sample_images/shiny_dragon.png)
+*Shiny dragon*
 
+---
 
-![Specular reflection](sample_images/shiny_dragon.png)
+## Features
 
-This code base is still under development and contains bugs/missing features. It is not intended for commercial use.
+- **BVH acceleration** — spatial median split on alternating axes (composite pattern)
+- **Möller–Trumbore intersection** — fast ray/triangle intersection
+- **Area lights with stratified sampling** — soft shadows via jittered grid supersampling
+- **Fresnel equations** — physically based specular reflection and refraction (Snell's law, total internal reflection)
+- **Russian Roulette path termination** — unbiased stochastic depth cutoff driven by surface reflectance
+- **Cosine-weighted hemisphere sampling** — importance sampling for diffuse indirect illumination
+- **OpenMP parallelisation** — dynamic scheduling over scanlines
 
+---
+
+## Architecture
+
+```
+Object (abstract)
+├── Sphere          — analytic ray/sphere intersection
+├── Triangle        — Möller–Trumbore, Phong normal interpolation
+├── Plane           — infinite plane
+├── AABB            — axis-aligned bounding box
+└── BVH             — recursive bounding volume hierarchy (leaf = triangle mesh)
+
+Light (abstract)
+└── AreaLight       — stratified sampling over a parallelogram emitter
+
+Camera              — generates primary rays through a virtual image plane
+Sampler             — thread-safe jittered random number generation
+WaveFrontParser     — loads .obj meshes and builds a BVH
+```
+
+The path tracing kernel (`Lo` in `lambertian_reflection`) evaluates the rendering equation recursively, coupling diffuse and specular terms so caustics arise naturally.
+
+---
+
+## Build
+
+Requires a C++11 compiler with OpenMP support (GCC or Clang recommended).
+
+```bash
+mkdir build && cd build
+cmake ..
+make -j$(nproc)
+./CGProject
+```
+
+The output is written as a `.ppm` file in the working directory.
+
+> **Note:** mesh data files (`.obj`) are not included in the repository. Place them under `data/` before running.
+
+---
+
+## Development Journal
+
+See [DEVLOG.md](DEVLOG.md) for a chronological record of design decisions, dead ends, and lessons learned during development — from the first ray/sphere intersection in February 2020 through BVH construction, area lights, Russian Roulette, and Fresnel refraction.
