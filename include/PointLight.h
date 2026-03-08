@@ -3,7 +3,7 @@
 #include "Light.h"
 
 #include <utility>
-#include "../Eigen/Core"
+#include <Eigen/Geometry>
 
 using Eigen::Vector3d;
 using std::move;

@@ -63,7 +63,7 @@ struct rgb {
     }
 
     auto operator!=(rgb c) -> bool {
-        return r!=c.r && g!=c.g && b!=c.b;
+        return r != c.r || g != c.g || b != c.b;
     }
     auto operator==(rgb c) -> bool {
         return r==c.r && g==c.g && b==c.b;

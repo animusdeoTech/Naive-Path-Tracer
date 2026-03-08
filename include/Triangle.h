@@ -3,7 +3,7 @@
 
 #include "Object.h"
 #include "Ray.h"
-#include "Eigen"
+#include <Eigen/Geometry>
 #include <numeric>
 #include <iostream>
 

@@ -2,7 +2,7 @@
 #define TRIANGLE_MESH_H
 
 #include "Object.h"
-#include "Eigen"
+#include <Eigen/Geometry>
 #include <memory>
 #include <numeric>
 #include <tuple>

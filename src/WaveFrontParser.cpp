@@ -1,5 +1,7 @@
 #include <write_ppm.h>
 #include <memory>
+#include <stdexcept>
+#include <sstream>
 #include <utility>
 #include "WaveFrontParser.h"
 
@@ -10,6 +12,31 @@ using std::unique_ptr;
 using std::shared_ptr;
 extern vector<shared_ptr<Vector3d>> normal_map;
 
+namespace {
+struct FaceIndex {
+    int v = -1;
+    int vt = -1;
+    int vn = -1;
+};
+
+FaceIndex parseFaceIndex(const String& token) {
+    FaceIndex idx;
+    std::stringstream ss(token);
+    String part;
+    int component = 0;
+    while (std::getline(ss, part, '/')) {
+        if (!part.empty()) {
+            const int value = std::stoi(part) - 1;
+            if (component == 0) idx.v = value;
+            else if (component == 1) idx.vt = value;
+            else if (component == 2) idx.vn = value;
+        }
+        ++component;
+    }
+    return idx;
+}
+}
+
 void parseTexture(const String& filename, const shared_ptr<Material>& mat) {
     char pSix[10];
     int width, height, maximum = 0;
@@ -17,7 +44,6 @@ void parseTexture(const String& filename, const shared_ptr<Material>& mat) {
     file >> pSix >> width >> height >> maximum;
     char delimiter;
     file.read(&delimiter, 1);
-    // Read RGB data.
     const int data_begin = file.tellg();
     file.seekg(0, file.end);
     const int data_end = file.tellg();
@@ -40,7 +66,6 @@ void parseNormalMap(String filename) {
     file >> pSix >> width >> height >> maximum;
     char delimiter;
     file.read(&delimiter, 1);
-    // Read RGB data.
     const int data_begin = file.tellg();
     file.seekg(0, file.end);
     const int data_end = file.tellg();
@@ -56,25 +81,26 @@ void parseNormalMap(String filename) {
     }
 }
 
-void parseWaveFrontFile(const String& filename, shared_ptr<BVH>& bvh) {
+bool parseWaveFrontFile(const String& filename, shared_ptr<BVH>& bvh) {
     vector<shared_ptr<Vector3d>> vertexes, normals;
     vector<shared_ptr<Vector2d>> textures;
     vector<shared_ptr<Object>> triangles;
     String s;
     std::ifstream fin(filename);
-    if (!fin)
-        return;
+    if (!fin) {
+        return false;
+    }
     while (fin >> s) {
         switch (*s.c_str()) {
             case 'v': {
-                if (s[1] == 't') {
+                if (s.size() > 1 && s[1] == 't') {
                     double u, v;
                     fin >> u >> v;
                     shared_ptr<Vector2d> vertex(new Vector2d());
                     vertex->x() = u;
                     vertex->y() = v;
                     textures.push_back(vertex);
-                } else if (s[1] == 'n') {
+                } else if (s.size() > 1 && s[1] == 'n') {
                     double x, y, z;
                     fin >> x >> y >> z;
                     shared_ptr<Vector3d> vertex(new Vector3d());
@@ -93,43 +119,46 @@ void parseWaveFrontFile(const String& filename, shared_ptr<BVH>& bvh) {
                 }
             } break;
             case 'f': {
-                unsigned int v1, vt1, vn1, v2, vt2, vn2, v3, vt3, vn3;
                 String f1, f2, f3;
                 fin >> f1 >> f2 >> f3;
-                vector<unsigned int> temp;
-                std::string token;
-                std::stringstream ss1(f1);
-                std::stringstream ss2(f2);
-                std::stringstream ss3(f3);
-                while (std::getline(ss1, token, '/')) {
-                    temp.push_back(std::stoul(token));
+                const FaceIndex i1 = parseFaceIndex(f1);
+                const FaceIndex i2 = parseFaceIndex(f2);
+                const FaceIndex i3 = parseFaceIndex(f3);
+                if (i1.v < 0 || i2.v < 0 || i3.v < 0) {
+                    continue;
                 }
-                while (std::getline(ss2, token, '/')) {
-                    temp.push_back(std::stoul(token));
+                if (i1.v >= static_cast<int>(vertexes.size()) ||
+                    i2.v >= static_cast<int>(vertexes.size()) ||
+                    i3.v >= static_cast<int>(vertexes.size())) {
+                    continue;
                 }
-                while (std::getline(ss3, token, '/')) {
-                    temp.push_back(std::stoul(token));
-                }
-                v1 = temp[0] - 1; vt1 = temp[1] - 1; vn1 = temp[2] - 1;
-                v2 = temp[3] - 1; vt2 = temp[4] - 1; vn2 = temp[5] - 1;
-                v3 = temp[6] - 1; vt3 = temp[7] - 1; vn3 = temp[8] - 1;
+
                 Matrix3d vertices, norms;
-                vertices    << *vertexes[v1], *vertexes[v2], *vertexes[v3];
-                norms       << *normals[vn1], *normals[vn2], *normals[vn3];
-                shared_ptr<Triangle> triangle(new Triangle(vertices, norms, *textures[vt1], *textures[vt2], *textures[vt3]));
+                vertices << *vertexes[i1.v], *vertexes[i2.v], *vertexes[i3.v];
+
+                const Vector3d geometric_normal =
+                    ((*vertexes[i2.v] - *vertexes[i1.v]).cross(*vertexes[i3.v] - *vertexes[i1.v])).normalized();
+
+                const Vector3d n1 = (i1.vn >= 0 && i1.vn < static_cast<int>(normals.size())) ? *normals[i1.vn] : geometric_normal;
+                const Vector3d n2 = (i2.vn >= 0 && i2.vn < static_cast<int>(normals.size())) ? *normals[i2.vn] : geometric_normal;
+                const Vector3d n3 = (i3.vn >= 0 && i3.vn < static_cast<int>(normals.size())) ? *normals[i3.vn] : geometric_normal;
+                norms << n1, n2, n3;
+
+                const Vector2d t1 = (i1.vt >= 0 && i1.vt < static_cast<int>(textures.size())) ? *textures[i1.vt] : Vector2d(0.0, 0.0);
+                const Vector2d t2 = (i2.vt >= 0 && i2.vt < static_cast<int>(textures.size())) ? *textures[i2.vt] : Vector2d(0.0, 0.0);
+                const Vector2d t3 = (i3.vt >= 0 && i3.vt < static_cast<int>(textures.size())) ? *textures[i3.vt] : Vector2d(0.0, 0.0);
+
+                shared_ptr<Triangle> triangle(new Triangle(vertices, norms, t1, t2, t3));
                 shared_ptr<Material> mat1(new Material());
-//                mat1->kd = rgb(0.823529,0.4117647,0.117647) * 0.3;
-                mat1->kd = rgb(0.25098,0.84158,0.815686)*0.3;
-//                mat1->kd = rgb(1,1,1)*0.1;
+                mat1->kd = rgb(0.25098,0.84158,0.815686) * 0.3;
                 triangle->material = mat1;
                 triangles.push_back(triangle);
+            } break;
+            default: {
+                std::getline(fin, s);
             } break;
         }
     }
     bvh = top_down(triangles);
-//    shared_ptr<Material> mat1(new Material());
-//    mat1->kd = rgb(0.25098,0.84158,0.815686);
-//    bvh->material = mat1;
-//    scene_objects.push_back(bvh);
+    return static_cast<bool>(bvh);
 }
-

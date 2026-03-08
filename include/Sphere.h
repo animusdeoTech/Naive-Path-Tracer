@@ -2,7 +2,7 @@
 #define SPHERE_H
 
 #include "Object.h"
-#include "../Eigen/Core"
+#include <Eigen/Geometry>
 
 using Eigen::Vector3d;
 using std::move;

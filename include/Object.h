@@ -2,7 +2,7 @@
 #define OBJECT_H
 
 #include "Material.h"
-#include "Eigen"
+#include <Eigen/Geometry>
 #include <memory>
 
 extern double nb_intersections;

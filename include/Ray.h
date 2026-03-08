@@ -1,7 +1,7 @@
 #ifndef RAY_H
 #define RAY_H
 
-#include "Eigen"
+#include <Eigen/Geometry>
 
 using Eigen::Vector3d;
 
