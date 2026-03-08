@@ -10,7 +10,7 @@ using String = std::string;
 using std::vector;
 using std::shared_ptr;
 
-void parseWaveFrontFile(const String& filename, shared_ptr<BVH>& bvh);
+bool parseWaveFrontFile(const String& filename, shared_ptr<BVH>& bvh);
 
 void parseTexture(const String& filename, const shared_ptr<Material>& mat);
 
